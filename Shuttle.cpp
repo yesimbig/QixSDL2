@@ -30,6 +30,8 @@ void ShuttleBehaviourComponent::Init()
     slowing = false;
     lineChasing = false;
     chasingDelay = 0;
+    moveStreak = 0;
+    stopDelay = 0;
 }
 
 void ShuttleBehaviourComponent::Update(float dt)
@@ -54,6 +56,7 @@ void ShuttleBehaviourComponent::Update(float dt)
         if(Move(dt * SHUTTLE_MOVING_SPEED, 0, slowing)){
             nowState = SHUTTLE_MOVE_RIGHT;
             moving = true;
+            moveStreak += dt;
         }
     }
     else if (keys.left && (nowState != SHUTTLE_MOVE_RIGHT || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
@@ -61,6 +64,7 @@ void ShuttleBehaviourComponent::Update(float dt)
         if(Move(-dt * SHUTTLE_MOVING_SPEED, 0, slowing)){
             nowState = SHUTTLE_MOVE_LEFT;
             moving = true;
+            moveStreak += dt;
         }
     }
     else if (keys.down && (nowState != SHUTTLE_MOVE_UP || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
@@ -68,6 +72,7 @@ void ShuttleBehaviourComponent::Update(float dt)
         if(Move(0, dt * SHUTTLE_MOVING_SPEED, slowing)){
             nowState = SHUTTLE_MOVE_DOWN;
             moving = true;
+            moveStreak += dt;
         }
     }
     else if (keys.up && (nowState != SHUTTLE_MOVE_DOWN || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
@@ -75,10 +80,20 @@ void ShuttleBehaviourComponent::Update(float dt)
         if(Move(0, -dt * SHUTTLE_MOVING_SPEED, slowing)){
             nowState = SHUTTLE_MOVE_UP;
             moving = true;
+            moveStreak += dt;
         }
     }
     
-    shuttleState = determineShuttleState();
+    if(!moving) stopDelay += dt;
+    else stopDelay = 0;
+    
+    //reset moveStreak when play release the moving buttons
+    if((nowState == SHUTTLE_MOVE_UP && !keys.up) || (nowState == SHUTTLE_MOVE_DOWN && !keys.down) ||
+                   (nowState == SHUTTLE_MOVE_LEFT && !keys.left) || (nowState == SHUTTLE_MOVE_RIGHT && !keys.right))
+        moveStreak = 0;
+    
+    
+    shuttleState = determineShuttleState(go->horizontalPosition, go->verticalPosition);
     
     
     if( (preState!=nowState && moving && shuttleState == SHUTTLE_STATE_MOVING_MIDDLE) ||
@@ -328,7 +343,14 @@ bool ShuttleBehaviourComponent::Move(float moveH, float moveV, bool slow)
     //collision detection to occupied grid
     if(determineGridCollition((int)afterMoveH + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET,(int)afterMoveV + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET, _field->getGrid()))
     {
-            return false;
+         return false;
+    }
+    
+    //set up a temperary stop while the shuttle is about to move out the edge
+    if( determineShuttleState(go->horizontalPosition, go->verticalPosition) == SHUTTLE_STATE_MOVING_EDGE &&
+       determineShuttleState(afterMoveH,afterMoveV) == SHUTTLE_STATE_MOVING_MIDDLE && moveStreak>0.10 && stopDelay < 0.15)
+    {
+        return false;
     }
     
     //collision all passed
@@ -339,11 +361,9 @@ bool ShuttleBehaviourComponent::Move(float moveH, float moveV, bool slow)
     return true;
 }
 
-int ShuttleBehaviourComponent::determineShuttleState()
+int ShuttleBehaviourComponent::determineShuttleState(float posH, float posV)
 {
-    float posH = go->horizontalPosition;
-    float posV = go->verticalPosition;
-    
+
     //determine border
     if(posH == FIELD_LEFT_OFFSET - SHUTTLE_SIZE/2 ||
        posH == FIELD_LEFT_OFFSET + FIELD_WIDTH - SHUTTLE_SIZE/2 ||

@@ -18,23 +18,42 @@ void Game::Init(AvancezLib* system)
     
     this->_system = system;
     
+    // initialize physics system
+    b2Vec2 gravity(0.0f, 0.0f);
+    world = new b2World(gravity);
+    
+    
+    //setup game objects
+    
     _monster = new Monster();
-    _field = new Field(system);
+    _field = new Field();
     _shuttle = new Shuttle();
     
+    //setup monster
     RenderComponent * monsterRender = new RenderComponent();
-    monsterRender->Create(_system, _monster, &game_objects, MONSTER_FILEPATH);
-    MonsterBehaviourComponent * monsterBehaviour = new MonsterBehaviourComponent();
-    monsterBehaviour->Create(_system, _monster, &game_objects,_field, &lines_pool);
+    monsterRender->CreateSingleColor(system, _monster, &game_objects, 0,255,0,255);
     
+    MonsterBehaviourComponent * monsterBehaviour = new MonsterBehaviourComponent();
+    monsterBehaviour->Create(_system, world, _monster, &game_objects,_field, &lines_pool);
+    
+    BoxPhysicsComponent * monsterBoxPhysics = new BoxPhysicsComponent();
+    monsterBoxPhysics->Create(system, world, _monster, &game_objects, b2_dynamicBody, FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_SIZE/2, MONSTER_SIZE, MONSTER_SIZE);
+
     _monster->Create();
     _monster->AddComponent(monsterBehaviour);
     _monster->AddComponent(monsterRender);
+    _monster->AddComponent(monsterBoxPhysics);
     _monster->AddReceiver(this);
     
-    _monster->Init(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_SIZE/2);
+    _monster->Init();
     
-    sparx_pool.Create(2);
+    monsterBoxPhysics->getBody()->ApplyLinearImpulse(b2Vec2(300,100), monsterBoxPhysics->getBody()->GetWorldCenter(), true);
+    monsterBoxPhysics->getBody()->ApplyAngularImpulse(-30, true);
+    
+    game_objects.insert(_monster);
+    
+    //generate two sparx into the game
+    sparx_pool.Create(SPARX_MAX_NUM);
     for(int i = 0;i < 2;i++){
         Sparx* sparx = sparx_pool.at(i);
         RenderComponent * sparxRender = new RenderComponent();
@@ -50,12 +69,16 @@ void Game::Init(AvancezLib* system)
         game_objects.insert(sparx);
     }
     
+    //setup field and wall
     _field->setMonsterPos(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_SIZE/2);
     
+    walls.CreateEmpty();
+    
+    _field->Create(system,world, &walls,  &game_objects);
     _field->Init();
     _field->AddReceiver(this);
     
-    
+    //setup shuttle and lines
     lines_pool.CreateEmpty();
     chasing_lines_pool.CreateEmpty();
     
@@ -64,11 +87,7 @@ void Game::Init(AvancezLib* system)
     
     RenderComponent * shuttleRender = new RenderComponent();
     shuttleRender->Create(_system, _shuttle, &game_objects, SHUTTLE_FILEPATH);
-    //shuttleRender->CreateSingleColor(_system, _shuttle, &game_objects, 255,255,0,255);
-    
-   // CollideComponent * shuttle_coll = new CollideComponent();
-    //shuttle_coll->Create(system, _shuttle, &game_objects, (ObjectPool<GameObject>*)&lines_pool);
-    
+
     _shuttle->Create();
     _shuttle->AddComponent(shuttleBehaviour);
     _shuttle->AddComponent(shuttleRender);
@@ -77,13 +96,14 @@ void Game::Init(AvancezLib* system)
     _shuttle->AddReceiver(this);
     _shuttle->Init(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - SHUTTLE_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT - SHUTTLE_SIZE/2);
     
-    
     game_objects.insert(_shuttle);
-    game_objects.insert(_monster);
     
+    //setup game state
     gameState = STATE_PLAYING;
     die_time = 0;
     life = 3;
+    generate_time = 0;
+    sparx_num = 2;
 }
 
 void Game::HandleEvents()
@@ -108,6 +128,33 @@ void Game::Update(float dt)
     
     if(gameState == STATE_PLAYING)
     {
+        float32 timeStep = 1.0f / 60.0f;
+        int32 velocityIterations = 1;
+        int32 positionIterations = 1;
+        world->Step(timeStep, velocityIterations, positionIterations);
+     
+        //generate two sparx into the game
+        if(generate_time > SPARX_GENERATE_TIME && sparx_num < SPARX_MAX_NUM){
+            generate_time = 0;
+            for(int i = sparx_num; i< sparx_num + 2; i++)
+            {
+                Sparx* sparx = sparx_pool.at(i);
+                RenderComponent * sparxRender = new RenderComponent();
+                sparxRender->Create(_system, sparx, &game_objects, SPARX_DIRPATH,SPARX_FRAMES,SPARX_FRAME_RATE);
+                SparxBehaviourComponent * sparxBehaviour = new SparxBehaviourComponent();
+                sparxBehaviour->Create(_system, sparx, &game_objects,_field, _shuttle, i&1);
+                
+                sparx->Create();
+                sparx->AddComponent(sparxRender);
+                sparx->AddComponent(sparxBehaviour);
+                sparx->AddReceiver(this);
+                sparx->Init(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - SPARX_SIZE/2, FIELD_TOP_OFFSET - SPARX_SIZE/2);
+                game_objects.insert(sparx);
+            }
+            sparx_num += 2;
+        }
+        generate_time += dt;
+        
         //draw unfinished lines
         lines_pool.Update(dt);
         
@@ -119,30 +166,31 @@ void Game::Update(float dt)
     }
     else if(gameState == STATE_DIE || gameState == STATE_WIN_ANI)
     {
-        
         die_time += dt;
         
         if(die_time >= DIE_ANI_TIME){
             _shuttle->resetHit();
             if(lines_pool.size()>0){
                 _shuttle->Init(lines_pool.at(0)->firstX - SHUTTLE_SIZE/2 + LINE_WIDTH/2 ,lines_pool.at(0)->firstY - SHUTTLE_SIZE/2 + LINE_WIDTH/2);
-                _monster->Init(_monster->horizontalPosition, _monster->verticalPosition);
+                _monster->Init();
                 
                 lines_pool.Destroy();
                 lines_pool.clear();
                 chasing_lines_pool.Destroy();
                 chasing_lines_pool.clear();
-                
             }
             
             
-            
-            if(gameState == STATE_WIN_ANI)
+            if(gameState == STATE_WIN_ANI){
+                _field->Init();
                 gameState = STATE_WIN;
+            }
             else if(life > 0)
                 gameState = STATE_PLAYING;
-            else
+            else{
+                _field->Init();
                 gameState = STATE_GAME_OVER;
+            }
             die_time = 0;
         }
         
@@ -163,7 +211,6 @@ void Game::Render()
     char msg[1024];
     
     if(gameState == STATE_GAME_OVER){
-        _field->Init();
         _system->drawText(SCREEN_WIDTH/2 - 203, SCREEN_HEIGHT/2 - 100, "GAME OVER",2);
         _system->drawText(SCREEN_WIDTH/2 - 115, SCREEN_HEIGHT/2, "Final score");
         sprintf(msg, "%5d", _field->getScore());
@@ -171,7 +218,6 @@ void Game::Render()
         return;
     }
     else if(gameState == STATE_WIN){
-        _field->Init();
         _system->drawText(SCREEN_WIDTH/2 - 143, SCREEN_HEIGHT/2 - 100, "YOU WIN!",2);
         _system->drawText(SCREEN_WIDTH/2 - 115, SCREEN_HEIGHT/2, "Final score");
         sprintf(msg, "%5d", _field->getScore());
@@ -222,5 +268,7 @@ void Game::Clean()
     
     lines_pool.Destroy();
     chasing_lines_pool.Destroy();
+    walls.Destroy();
+    delete world;
 }
 

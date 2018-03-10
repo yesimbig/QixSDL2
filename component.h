@@ -30,11 +30,11 @@ public:
 
 class RenderComponent : public Component
 {
-    std::vector<Sprite*> sprite;
-    int frameSize;
-    float frameRate;
-    int nowFrame;
-    float nowTime;
+    std::vector<Sprite*> sprite; // I switch sprite into vector so that the program can handle animation of each object
+    int frameSize; //how many frames in the object
+    float frameRate; //each frame costs how much time
+    int nowFrame; //record current frame
+    float nowTime; //record current frame time
 public:
 
 	virtual void Create(AvancezLib* system, GameObject * go, std::set<GameObject*> * game_objects, const char * sprite_name, int frameSize = 1, float frameRate = 0);

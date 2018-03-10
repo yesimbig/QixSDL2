@@ -9,6 +9,7 @@
 #include "Game.hpp"
 #include "DEFINISIONS.hpp"
 
+#include "Box2D/Box2D.h"
 
 int main(int argc, const char * argv[]) {
     AvancezLib system;

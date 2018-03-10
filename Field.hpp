@@ -6,20 +6,24 @@
 #include "avancezlib.h"
 #include "DEFINISIONS.hpp"
 #include "Lines.hpp"
+#include "box.hpp"
 
 class Field: public GameObject{
 public:
-    Field(AvancezLib* system): _system(system){}
+    Field(){}
     ~Field(){ delete[] _pixels; delete[] _grid; SDL_DestroyTexture(_texture); }
     
+    virtual void Create(AvancezLib* system, b2World * _world, ObjectPool<Box>* walls, std::set<GameObject *> *game_obj);
     virtual void Init();
     virtual void Draw();
     virtual void Update();
     
     //Uint32* getPixels(){return _pixels;};
     int* getGrid() {return _grid;}
-    void setGrid(ObjectPool<Lines>* lines, bool slowing);
-    int absCoor(int x, int y);
+    void setGrid(ObjectPool<Lines>* lines, bool slowing); //color the grid
+    int absCoor(int x, int y); //transform the field coordinate into real coordinate
+    Box* generateWall(int posX, int posY, int width, int height);
+    
     int getRate(){ return (int)(_rate*100);}
     int getScore(){ return _score;}
     
@@ -34,8 +38,12 @@ public:
 
 private:
     AvancezLib* _system;
+    std::set<GameObject*> * game_objects;
     Uint32 * _pixels;
     SDL_Texture * _texture;
+    ObjectPool<Box>* _walls;
+    b2World * _world;    //Box2D world
+    
     int* _grid;
     bool visit[FIELD_WIDTH*FIELD_HEIGHT];
     float _rate;

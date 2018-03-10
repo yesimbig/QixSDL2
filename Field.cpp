@@ -1,8 +1,17 @@
 #include "Field.hpp"
 
+void Field::Create(AvancezLib* system, b2World* world, ObjectPool<Box>* walls, std::set<GameObject *> *game_obj)
+{
+    _system = system;
+    _world = world;
+    _walls = walls;
+    _pixels = new Uint32[(FIELD_WIDTH + 2*FIELD_THICK) * (FIELD_HEIGHT + 2*FIELD_THICK) ];
+    game_objects = game_obj;
+}
+
 void Field::Init()
 {
-    _pixels = new Uint32[(FIELD_WIDTH + 2*FIELD_THICK) * (FIELD_HEIGHT + 2*FIELD_THICK) ];
+    
     memset(_pixels, 0, (FIELD_WIDTH + 2*FIELD_THICK) * (FIELD_HEIGHT + 2*FIELD_THICK) * sizeof(Uint32));
 
     //set horizontal line of the field
@@ -10,7 +19,6 @@ void Field::Init()
         for(int i=0;i<FIELD_WIDTH + 2 * FIELD_THICK; i++){
             _pixels[ i + j * (FIELD_WIDTH + 2 * FIELD_THICK)] = 0xffffff;
             _pixels[ i + (FIELD_HEIGHT + 2 * FIELD_THICK - j - 1) * (FIELD_WIDTH + 2 * FIELD_THICK)] = 0xffffff;
-            
         }
     
     //set vertical line of the field
@@ -19,6 +27,22 @@ void Field::Init()
             _pixels[ j + i * (FIELD_WIDTH + 2 * FIELD_THICK)] = 0xffffff;
             _pixels[ FIELD_WIDTH + 2 * FIELD_THICK - j - 1 + i * (FIELD_WIDTH + 2 * FIELD_THICK)] = 0xffffff;
         }
+    
+    //set walls
+    _walls->Destroy();
+    _walls->clear();
+    
+    //top wall
+    _walls->push_back(generateWall(FIELD_LEFT_OFFSET - FIELD_THICK,FIELD_TOP_OFFSET - FIELD_THICK, FIELD_WIDTH + 2* FIELD_THICK, FIELD_THICK));
+    //down wall
+    _walls->push_back(generateWall(FIELD_LEFT_OFFSET - FIELD_THICK,FIELD_TOP_OFFSET + FIELD_HEIGHT, FIELD_WIDTH + 2* FIELD_THICK, FIELD_THICK));
+    
+    //left wall
+    _walls->push_back(generateWall(FIELD_LEFT_OFFSET - FIELD_THICK,FIELD_TOP_OFFSET - FIELD_THICK, FIELD_THICK, FIELD_HEIGHT + 2*FIELD_THICK));
+    
+    //right wall
+    _walls->push_back(generateWall(FIELD_LEFT_OFFSET + FIELD_WIDTH,FIELD_TOP_OFFSET - FIELD_THICK, FIELD_THICK, FIELD_HEIGHT + 2*FIELD_THICK));
+    
     
     _texture = SDL_CreateTexture(_system->getRenderer(),
                     SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, FIELD_WIDTH + 2*FIELD_THICK, FIELD_HEIGHT + 2*FIELD_THICK);
@@ -50,6 +74,9 @@ void Field::setGrid(ObjectPool<Lines>* lines, bool slowing)
                     _grid[k * FIELD_WIDTH + j] = FIELD_STATE_EDGE;
                     _pixels[absCoor(j,k)] = 0xFFFFFF;
                 }
+        //set box2D wall
+        _walls->push_back(generateWall((int)go0->horizontalPosition,(int)go0->verticalPosition, (int)go0->width + 1, (int) go0->height + 1));
+        
     }
     
     
@@ -204,6 +231,25 @@ bool Field::isEdge(int x, int y, int *grid)
 int Field::absCoor(int x, int y)
 {
     return  FIELD_THICK + x + (y + FIELD_THICK) * (FIELD_WIDTH + 2 * FIELD_THICK);
+}
+
+Box* Field::generateWall(int posX, int posY, int width, int height){
+    Box* static_box = new Box();
+    //RenderComponent * static_box_render = new RenderComponent();
+    //static_box_render->CreateSingleColor(_system, static_box, game_objects, 255,0,0,255);
+    
+    BoxPhysicsComponent * static_box_physics = new BoxPhysicsComponent();
+    static_box_physics->Create(_system, _world, static_box, game_objects, b2_staticBody, posX, posY, width, height);
+    
+    static_box->Create();
+    //static_box->AddComponent(static_box_render);
+    static_box->AddComponent(static_box_physics);
+    static_box->AddReceiver(this);
+    static_box->Init();
+    game_objects->insert(static_box);
+    
+    
+    return static_box;
 }
 
 void Field::Draw()

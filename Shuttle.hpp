@@ -21,7 +21,7 @@ public:
     
     // move the player left or right
     bool Move(float moveH, float moveV, bool slow);
-    int determineShuttleState();
+    int determineShuttleState(float posH, float posV);
     Lines* generateLine(float x,float y, float w, float h, int r, int g, int b, int a = 255);
     bool determineGridCollition(int i,int j,int* _grid);
     void resetLines();
@@ -39,6 +39,8 @@ private:
     bool lineChasing;
     float growingLength;
     float chasingDelay;
+    float moveStreak; //calculate the moving streak, it is used to determine the shuttle should be stopped while it moves out of the edge
+    float stopDelay; // whenever the shuttle stop, it calculate the time of stop
 
 };
 

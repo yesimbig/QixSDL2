@@ -15,6 +15,8 @@
 #define SPARX_FRAMES             7
 #define SPARX_FRAME_RATE         0.1
 #define SPARX_SPEED              200.0f
+#define SPARX_MAX_NUM            10
+#define SPARX_GENERATE_TIME      30
 
 #define FIELD_WIDTH 540
 #define FIELD_HEIGHT 650
@@ -31,8 +33,8 @@
 #define STATE_PLAYING 99
 #define STATE_DIE 98
 #define STATE_WIN 97
-#define STATE_WIN_ANI 95
-#define STATE_GAME_OVER 96
+#define STATE_WIN_ANI 96
+#define STATE_GAME_OVER 95
 
 #define DIE_ANI_TIME 3
 
@@ -57,7 +59,7 @@
 
 #define LINE_WIDTH 3
 
-#define MONSTER_SIZE 30
+#define MONSTER_SIZE 20
 #define MONSTER_SPEED 200.0f
 
 #define FIELD_UP 1
