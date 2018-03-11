@@ -59,7 +59,7 @@
 
 #define LINE_WIDTH 3
 
-#define MONSTER_SIZE 20
+#define MONSTER_BODY_SIZE 15
 #define MONSTER_SPEED 200.0f
 
 #define FIELD_UP 1

@@ -6,7 +6,16 @@
 #include <set>
 #include <iostream>
 
-class BoxPhysicsComponent : public Component
+class Circle : public GameObject
+{
+public:
+    b2Body* body;
+    virtual ~Circle() { SDL_Log("Circle::~Circle"); }
+    b2Body* getBody(){ return body; }
+};
+
+
+class CirclePhysicsComponent : public Component
 {
     b2World* world;
     b2Body* body;
@@ -15,19 +24,18 @@ class BoxPhysicsComponent : public Component
     
 public:
     
-    virtual void Create(AvancezLib* system, b2World* world, GameObject * go, std::set<GameObject*> * game_objects, b2BodyType type, float pos_x, float pos_y, float size_r)
+    virtual void Create(AvancezLib* system, b2World* world, Circle * go, std::set<GameObject*> * game_objects, b2BodyType type, float pos_x, float pos_y, float size_r)
     {
         Component::Create(system, go, game_objects);
         
         this->world = world;
-        this->size_r
+        this->size_r = size_r;
         
         b2BodyDef def;
         def.type = type;
-        def.position.Set(pos_x, pos_y);
-        b2PolygonShape shape;
-        shape.SetAsCircle(this->size_x/2, this->size_y/2);
-        
+        def.position.Set(pos_x + size_r/2, pos_y + size_r/2);
+        b2CircleShape shape;
+        shape.m_radius = size_r/2;
         
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &shape;
@@ -36,26 +44,26 @@ public:
         fixtureDef.restitution = 1; //new code
         body = world->CreateBody(&def);
         body->CreateFixture(&fixtureDef);
+        
+        go->body = body;
     }
     
     virtual void Init(){
-        go->width = this->size_x;
-        go->height = this->size_y;
+        go->width = this->size_r;
+        go->height = this->size_r;
         Component::Init();
     }
     
     virtual void Update(float dt)
     {
         
-        b2Vec2 position = body->GetPosition() - b2Vec2(size_x/2,size_y/2);
+        b2Vec2 position = body->GetPosition() - b2Vec2(size_r/2,size_r/2);
         float32 angle = body->GetAngle();
         
         go->horizontalPosition = position.x;
         go->verticalPosition = position.y;
-        go->rotationAngle = angle *(-180 / 3.14f);
+        go->rotationAngle = angle *(180 / 3.14f);
         
-        if (position.y < 0) // When the box reaches the top of the screen, it disappears.
-            go->enabled = false;
     }
     
     virtual b2Body* getBody()
@@ -63,7 +71,7 @@ public:
         return body;
     }
     
-    virtual ~BoxPhysicsComponent()
+    virtual ~CirclePhysicsComponent()
     {
         world->DestroyBody(body);
     }
@@ -71,12 +79,4 @@ public:
 
 
 
-class Circle : public GameObject
-{
-    BoxPhysicsComponent * physics;
-    b2Body* body;
-public:
-    
-    virtual ~Circle() { SDL_Log("Circle::~Circle"); }
-    b2Body* getBody(){ return body; }
-};
+

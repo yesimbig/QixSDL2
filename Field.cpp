@@ -82,8 +82,8 @@ void Field::setGrid(ObjectPool<Lines>* lines, bool slowing)
     
     //start to set grid map
     
-    int mY = (int)monsterY + MONSTER_SIZE/2 - FIELD_TOP_OFFSET;
-    int mX = (int)monsterX + MONSTER_SIZE/2 - FIELD_LEFT_OFFSET;
+    int mY = (int)monsterY - FIELD_TOP_OFFSET;
+    int mX = (int)monsterX - FIELD_LEFT_OFFSET;
     //BFS
     memset(visit,false,sizeof(visit));
     std::queue<Point> Q;

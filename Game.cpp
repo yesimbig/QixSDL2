@@ -30,26 +30,9 @@ void Game::Init(AvancezLib* system)
     _shuttle = new Shuttle();
     
     //setup monster
-    RenderComponent * monsterRender = new RenderComponent();
-    monsterRender->CreateSingleColor(system, _monster, &game_objects, 0,255,0,255);
-    
-    MonsterBehaviourComponent * monsterBehaviour = new MonsterBehaviourComponent();
-    monsterBehaviour->Create(_system, world, _monster, &game_objects,_field, &lines_pool);
-    
-    BoxPhysicsComponent * monsterBoxPhysics = new BoxPhysicsComponent();
-    monsterBoxPhysics->Create(system, world, _monster, &game_objects, b2_dynamicBody, FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_SIZE/2, MONSTER_SIZE, MONSTER_SIZE);
-
-    _monster->Create();
-    _monster->AddComponent(monsterBehaviour);
-    _monster->AddComponent(monsterRender);
-    _monster->AddComponent(monsterBoxPhysics);
+    _monster->Create(system, world, _monster, &game_objects, _field, &lines_pool, _shuttle, FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_BODY_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_BODY_SIZE/2, MONSTER_BODY_SIZE);
     _monster->AddReceiver(this);
-    
     _monster->Init();
-    
-    monsterBoxPhysics->getBody()->ApplyLinearImpulse(b2Vec2(300,100), monsterBoxPhysics->getBody()->GetWorldCenter(), true);
-    monsterBoxPhysics->getBody()->ApplyAngularImpulse(-30, true);
-    
     game_objects.insert(_monster);
     
     //generate two sparx into the game
@@ -70,7 +53,7 @@ void Game::Init(AvancezLib* system)
     }
     
     //setup field and wall
-    _field->setMonsterPos(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_SIZE/2);
+    //_field->setMonsterPos(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_SIZE/2);
     
     walls.CreateEmpty();
     

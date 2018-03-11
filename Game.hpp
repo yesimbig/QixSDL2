@@ -3,6 +3,7 @@
 #include "SDL2_image/SDL_image.h"
 #include "Box2D/Box2D.h"
 #include "box.hpp"
+#include "circle.hpp"
 
 #include "game_object.h"
 #include "avancezlib.h"

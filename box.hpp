@@ -6,6 +6,16 @@
 #include <set>
 #include <iostream>
 
+class Box : public GameObject
+{
+   
+public:
+    b2Body* body;
+    virtual ~Box() { SDL_Log("Box::~Box"); }
+    b2Body* getBody(){ return body; }
+};
+
+
 class BoxPhysicsComponent : public Component
 {
     b2World* world;
@@ -15,7 +25,7 @@ class BoxPhysicsComponent : public Component
     
 public:
     
-    virtual void Create(AvancezLib* system, b2World* world, GameObject * go, std::set<GameObject*> * game_objects, b2BodyType type, float pos_x, float pos_y, float size_x, float size_y)
+    virtual void Create(AvancezLib* system, b2World* world, Box * go, std::set<GameObject*> * game_objects, b2BodyType type, float pos_x, float pos_y, float size_x, float size_y)
     {
         Component::Create(system, go, game_objects);
         
@@ -37,6 +47,7 @@ public:
         fixtureDef.restitution = 1; //new code
         body = world->CreateBody(&def);
         body->CreateFixture(&fixtureDef);
+        go->body = body;
     }
     
     virtual void Init(){
@@ -53,7 +64,7 @@ public:
         
         go->horizontalPosition = position.x;
         go->verticalPosition = position.y;
-        go->rotationAngle = angle *(-180 / 3.14f);
+        go->rotationAngle = angle *(180 / 3.14f);
         
         if (position.y < 0) // When the box reaches the top of the screen, it disappears.
             go->enabled = false;
@@ -72,13 +83,4 @@ public:
 
 
 
-class Box : public GameObject
-{
-    BoxPhysicsComponent * physics;
-    b2Body* body;
-public:
-    
-    virtual ~Box() { SDL_Log("Box::~Box"); }
-    b2Body* getBody(){ return body; }
-};
 

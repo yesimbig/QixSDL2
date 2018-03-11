@@ -383,6 +383,9 @@ int ShuttleBehaviourComponent::determineShuttleState(float posH, float posV)
 
 bool ShuttleBehaviourComponent::determineGridCollition(int i,int j,int* _grid)
 {
+    //std::cout<<i<<" "<<j<<"\n";
+    if(j<0) j = 0;
+    if(i<0) i = 0;
     if (j>=FIELD_HEIGHT) j = FIELD_HEIGHT-1;
     if (i>=FIELD_WIDTH) i = FIELD_WIDTH-1;
     if(j<FIELD_HEIGHT && i < FIELD_WIDTH &&  _grid[j * FIELD_WIDTH + i] == FIELD_STATE_OCCUPIED)
