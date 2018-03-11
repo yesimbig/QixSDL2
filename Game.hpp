@@ -22,13 +22,14 @@ public:
     Game();
     ~Game();
     
-    virtual void Init(AvancezLib* system);
+    virtual void Create(AvancezLib* system);
+    virtual void Init();
     
     virtual void HandleEvents();
     virtual void Update(float dt);  //control the game state
     virtual void Render();          //draw the game text
     virtual void Receive(Message m);
-    virtual void Clean();
+    virtual void Destroy();
     
 private:
     std::set<GameObject*> game_objects;

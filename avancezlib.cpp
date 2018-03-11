@@ -1,5 +1,5 @@
 #include "avancezlib.h"
-
+#include "DEFINISIONS.hpp"
 // Creates the main window. Returns true on success.
 bool AvancezLib::init(int width, int height)
 {
@@ -12,7 +12,7 @@ bool AvancezLib::init(int width, int height)
 	}
 
 	//Create window
-	window = SDL_CreateWindow("aVANCEZ", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
+	window = SDL_CreateWindow(GAME_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
 	if (window == NULL)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Window could not be created! SDL_Error: %s\n", SDL_GetError());

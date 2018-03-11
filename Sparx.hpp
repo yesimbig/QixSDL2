@@ -17,7 +17,6 @@ public:
     virtual void Init();
     
     virtual void Update(float dt);
-    
 private:
     
     Field* _field;

@@ -12,7 +12,7 @@ Game::~Game()
     
 }
 
-void Game::Init(AvancezLib* system)
+void Game::Create(AvancezLib* system)
 {
     SDL_Log("Game::Create");
     
@@ -30,13 +30,18 @@ void Game::Init(AvancezLib* system)
     //setup monster
     _monster->Create(system, world, _monster, &game_objects, _field, &lines_pool, _shuttle, FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_BODY_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_BODY_SIZE/2, MONSTER_BODY_SIZE);
     _monster->AddReceiver(this);
-    _monster->Init();
     game_objects.insert(_monster);
     
-    //generate two sparx into the game
+    //setup field and walls
+    walls.CreateEmpty();
+    _field->Create(system,world, &walls,  &game_objects);
+    _field->AddReceiver(this);
+    
+    //generate sparx into the game
     sparx_pool.Create(SPARX_MAX_NUM);
-    for(int i = 0;i < 2;i++){
+    for(int i = 0 ;i< SPARX_MAX_NUM; i++){
         Sparx* sparx = sparx_pool.at(i);
+        game_objects.insert(sparx);
         RenderComponent * sparxRender = new RenderComponent();
         sparxRender->Create(_system, sparx, &game_objects, SPARX_DIRPATH,SPARX_FRAMES,SPARX_FRAME_RATE);
         SparxBehaviourComponent * sparxBehaviour = new SparxBehaviourComponent();
@@ -46,15 +51,7 @@ void Game::Init(AvancezLib* system)
         sparx->AddComponent(sparxRender);
         sparx->AddComponent(sparxBehaviour);
         sparx->AddReceiver(this);
-        sparx->Init(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - SPARX_SIZE/2, FIELD_TOP_OFFSET - SPARX_SIZE/2);
-        game_objects.insert(sparx);
     }
-    
-    //setup field and walls
-    walls.CreateEmpty();
-    _field->Create(system,world, &walls,  &game_objects);
-    _field->Init();
-    _field->AddReceiver(this);
     
     //setup shuttle and lines
     lines_pool.CreateEmpty();
@@ -69,18 +66,44 @@ void Game::Init(AvancezLib* system)
     _shuttle->Create();
     _shuttle->AddComponent(shuttleBehaviour);
     _shuttle->AddComponent(shuttleRender);
-    //_shuttle->AddComponent(shuttle_coll);
     
     _shuttle->AddReceiver(this);
-    _shuttle->Init(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - SHUTTLE_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT - SHUTTLE_SIZE/2);
+    
     game_objects.insert(_shuttle);
     
+    
+}
+
+void Game::Init()
+{
     //setup game state
     gameState = STATE_PLAYING;
     die_time = 0;
     life = 3;
     generate_time = 0;
     sparx_num = 2;
+    
+    _shuttle->Init(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - SHUTTLE_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT - SHUTTLE_SIZE/2);
+    
+
+    _monster->Init(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_BODY_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_BODY_SIZE/2);
+    _field->Init();
+    
+    //setup two sparx
+    for(int i = 0;i < 2;i++){
+        Sparx* sparx = sparx_pool.at(i);
+        sparx->Init(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - SPARX_SIZE/2, FIELD_TOP_OFFSET - SPARX_SIZE/2);
+    }
+    for(int i = 2;i < SPARX_MAX_NUM;i++){
+        Sparx* sparx = sparx_pool.at(i);
+        sparx->enabled = false;
+    }
+    
+    lines_pool.Destroy();
+    lines_pool.clear();
+    chasing_lines_pool.Destroy();
+    chasing_lines_pool.clear();
+    
 }
 
 void Game::HandleEvents()
@@ -117,17 +140,7 @@ void Game::Update(float dt)
             for(int i = sparx_num; i< sparx_num + 2; i++)
             {
                 Sparx* sparx = sparx_pool.at(i);
-                RenderComponent * sparxRender = new RenderComponent();
-                sparxRender->Create(_system, sparx, &game_objects, SPARX_DIRPATH,SPARX_FRAMES,SPARX_FRAME_RATE);
-                SparxBehaviourComponent * sparxBehaviour = new SparxBehaviourComponent();
-                sparxBehaviour->Create(_system, sparx, &game_objects,_field, _shuttle, i&1);
-                
-                sparx->Create();
-                sparx->AddComponent(sparxRender);
-                sparx->AddComponent(sparxBehaviour);
-                sparx->AddReceiver(this);
                 sparx->Init(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - SPARX_SIZE/2, FIELD_TOP_OFFSET - SPARX_SIZE/2);
-                game_objects.insert(sparx);
             }
             sparx_num += 2;
         }
@@ -151,7 +164,7 @@ void Game::Update(float dt)
             _shuttle->resetHit();
             if(lines_pool.size()>0){
                 _shuttle->Init(lines_pool.at(0)->firstX - SHUTTLE_SIZE/2 + LINE_WIDTH/2 ,lines_pool.at(0)->firstY - SHUTTLE_SIZE/2 + LINE_WIDTH/2);
-                _monster->Init();
+                //
                 
                 lines_pool.Destroy();
                 lines_pool.clear();
@@ -182,6 +195,14 @@ void Game::Update(float dt)
         
     }
     
+    if(gameState == STATE_GAME_OVER || gameState == STATE_WIN){
+        AvancezLib::KeyStatus keys;
+        _system->getKeyStatus(keys);
+        if(keys.slow){
+            Init();
+        }
+    }
+    
     
 }
 
@@ -190,11 +211,12 @@ void Game::Render()
     
     char msg[1024];
     
-    if(gameState == STATE_GAME_OVER){
+   if(gameState == STATE_GAME_OVER){
         _system->drawText(SCREEN_WIDTH/2 - 203, SCREEN_HEIGHT/2 - 100, "GAME OVER",2);
         _system->drawText(SCREEN_WIDTH/2 - 115, SCREEN_HEIGHT/2, "Final score");
         sprintf(msg, "%5d", _field->getScore());
         _system->drawText(SCREEN_WIDTH/2 - 60 , SCREEN_HEIGHT/2 + 50, msg,1.3);
+        _system->drawText(SCREEN_WIDTH/2 - 130 , SCREEN_HEIGHT/2 + 130, "Press  \"space\"  to  restart",0.5);
         return;
     }
     else if(gameState == STATE_WIN){
@@ -202,9 +224,10 @@ void Game::Render()
         _system->drawText(SCREEN_WIDTH/2 - 115, SCREEN_HEIGHT/2, "Final score");
         sprintf(msg, "%5d", _field->getScore());
         _system->drawText(SCREEN_WIDTH/2 - 60 , SCREEN_HEIGHT/2 + 50, msg,1.3);
+        _system->drawText(SCREEN_WIDTH/2 - 130 , SCREEN_HEIGHT/2 + 130, "Press  \"space\"  to  restart",0.5);
         return;
     }
-    
+
     _system->drawText(SCREEN_WIDTH/2 - 33, 0, "QIX");
     
     _system->drawText(SCREEN_WIDTH/2 - 238, 50, "Score",0.7);
@@ -237,7 +260,7 @@ void Game::Receive(Message m)
 
 }
 
-void Game::Clean()
+void Game::Destroy()
 {
     SDL_Log("Game::Destroy");
     for (auto go = game_objects.begin(); go != game_objects.end(); go++)
@@ -245,10 +268,13 @@ void Game::Clean()
 
     delete _shuttle;
     delete _field;
+    delete _monster;
     
     lines_pool.Destroy();
     chasing_lines_pool.Destroy();
     walls.Destroy();
+    sparx_pool.Destroy();
+    
     delete world;
 }
 

@@ -141,18 +141,28 @@ Box* Monster::generateTentacleSeg( float pos_x, float pos_y, float size_x, float
 }
 
 
-void Monster::Init()
+void Monster::Init(float pos_x, float pos_y)
 {
-
+    SDL_Log("Monster::Init");
     rushTime = 0;
     wanderTime = 0;
+    
+    _mainBody->SetTransform(b2Vec2(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_BODY_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_BODY_SIZE/2), 0);
+    
+    float linkLength = MONSTER_BODY_SIZE/2 - 1;
+    //the tentacles' position, three tentalcles are at 90, 210, and 330 degrees to the monster's body
+    double linkPoint[3][2] = {{ 0, linkLength}, {linkLength * std::cos( M_PI * 7/6 ), linkLength * std::sin( M_PI * 7/6 )},{linkLength * std::cos(M_PI * 11/6), linkLength * std::sin(M_PI * 11/6)}};
+    for(int i = 0;i<30;i++)
+        tentacles.at(i)->getBody()->SetTransform( b2Vec2(pos_x + (i%10) * linkPoint[i/10][0], pos_y + (i%10) * linkPoint[i/10][1]), 0);
+
+    
     std::srand(std::time(NULL));
     float angle = std::rand()%360;
     wanderDir = b2Vec2( std::cos(angle/180 * M_PI), std::sin(angle/180 * M_PI));
     
-    _mainBody->ApplyLinearImpulse(b2Vec2( wanderDir.x * 400,wanderDir.y * 400) , _mainBody->GetWorldCenter(), false);
+    _mainBody->ApplyLinearImpulse(b2Vec2( wanderDir.x * 40,wanderDir.y * 40) , _mainBody->GetWorldCenter(), false);
     
-    SDL_Log("Monster::Init");
+    
     GameObject::Init();
     
 }

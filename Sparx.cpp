@@ -126,7 +126,6 @@ void SparxBehaviourComponent::Update(float dt)
     go->verticalPosition = nextPosy - go->height/2 + FIELD_TOP_OFFSET;
 }
 
-
 void Sparx::Init(float h, float v)
 {
     this->horizontalPosition = h;

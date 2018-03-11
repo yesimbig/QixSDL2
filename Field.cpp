@@ -57,6 +57,7 @@ void Field::Init()
     setDirField(FIELD_WIDTH/2, FIELD_HEIGHT/2, _grid, _dirField, false);
     setDirField(FIELD_WIDTH/2, FIELD_HEIGHT/2, _grid, _reDirField, true);
     _rate = 0;
+    _score = 0;
 }
 
 void Field::setGrid(ObjectPool<Lines>* lines, bool slowing)

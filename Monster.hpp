@@ -42,6 +42,7 @@ class Monster: public GameObject
     b2Body* _mainBody;          //monster's main body
     b2Body* _tentaclesBody[3];  //three tentacles
     
+    
 public:
     Circle *_monsterBody;
     ObjectPool<Box> tentacles;
@@ -49,13 +50,13 @@ public:
     float rushTime;
     b2Vec2 wanderDir;
     
-    virtual ~Monster(){  }
+    virtual ~Monster(){ }
     
     virtual void Create(AvancezLib* system, b2World* world, GameObject * go, std::set<GameObject*> * game_objects,  Field* field, ObjectPool<Lines>* lines_pool, Shuttle* shuttle, float pos_x, float pos_y, float size_r);
     
     virtual void Update(float dt);
     
-    virtual void Init();
+    virtual void Init(float posX, float posY);
     virtual void Receive(Message m);
     
     Box* generateTentacleSeg(float pos_x, float pos_y, float size_x, float size_y, int r);
