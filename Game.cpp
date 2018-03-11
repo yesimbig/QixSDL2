@@ -22,9 +22,7 @@ void Game::Init(AvancezLib* system)
     b2Vec2 gravity(0.0f, 0.0f);
     world = new b2World(gravity);
     
-    
     //setup game objects
-    
     _monster = new Monster();
     _field = new Field();
     _shuttle = new Shuttle();
@@ -52,11 +50,8 @@ void Game::Init(AvancezLib* system)
         game_objects.insert(sparx);
     }
     
-    //setup field and wall
-    //_field->setMonsterPos(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - MONSTER_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT/2 - MONSTER_SIZE/2);
-    
+    //setup field and walls
     walls.CreateEmpty();
-    
     _field->Create(system,world, &walls,  &game_objects);
     _field->Init();
     _field->AddReceiver(this);
@@ -78,7 +73,6 @@ void Game::Init(AvancezLib* system)
     
     _shuttle->AddReceiver(this);
     _shuttle->Init(FIELD_LEFT_OFFSET + FIELD_WIDTH/2 - SHUTTLE_SIZE/2, FIELD_TOP_OFFSET + FIELD_HEIGHT - SHUTTLE_SIZE/2);
-    
     game_objects.insert(_shuttle);
     
     //setup game state
@@ -109,6 +103,7 @@ void Game::Update(float dt)
     _field->Update();
     _field->Draw();
     
+    //playing state
     if(gameState == STATE_PLAYING)
     {
         float32 timeStep = 1.0f / 60.0f;
@@ -147,6 +142,7 @@ void Game::Update(float dt)
         for (auto go = game_objects.begin(); go != game_objects.end(); go++)
             (*go)->Update(dt);
     }
+    // die or win's time state
     else if(gameState == STATE_DIE || gameState == STATE_WIN_ANI)
     {
         die_time += dt;
@@ -191,6 +187,7 @@ void Game::Update(float dt)
 
 void Game::Render()
 {
+    
     char msg[1024];
     
     if(gameState == STATE_GAME_OVER){

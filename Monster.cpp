@@ -14,12 +14,6 @@ void MonsterBehaviourComponent::Create(AvancezLib* system, b2World * world, Game
 
 void MonsterBehaviourComponent::Init()
 {
-    /*std::srand(std::time(NULL));
-    float angle = std::rand()%360;
-    speedH = MONSTER_SPEED * std::sin(angle/180 * M_PI);
-    speedV = MONSTER_SPEED * std::cos(angle/180 * M_PI);
-    */
-
     
 }
 
@@ -49,11 +43,6 @@ bool MonsterBehaviourComponent::determineLineCollition(float posX, float posY)
     return false;
 }
 
-float MonsterBehaviourComponent::distance(float posX1, float posY1, float posX2, float posY2)
-{
-    return std::sqrt((posX1-posX2)*(posX1-posX2) + (posY1-posY2)*(posY1-posY2));
-}
-
 void Monster::Create(AvancezLib* system, b2World* world, GameObject * go, std::set<GameObject*> * game_objects,  Field* field, ObjectPool<Lines>* lines_pool, Shuttle* shuttle, float pos_x, float pos_y, float size_r){
     _system = system;
     _world = world;
@@ -62,6 +51,7 @@ void Monster::Create(AvancezLib* system, b2World* world, GameObject * go, std::s
     _lines_pool = lines_pool;
     _shuttle = shuttle;
     
+    //generate the monster's body
     _monsterBody = new Circle();
     RenderComponent * monsterRender = new RenderComponent();
     monsterRender->Create(system, _monsterBody, game_objects, MONSTER_FILEPATH);
@@ -80,15 +70,17 @@ void Monster::Create(AvancezLib* system, b2World* world, GameObject * go, std::s
     
     game_objects->insert(_monsterBody);
     
-    tentacles.CreateEmpty();
     
+    //generate the tentalcles' segment
+    tentacles.CreateEmpty();
     float linkLength = MONSTER_BODY_SIZE/2 - 1;
+    //the tentacles' position, three tentalcles are at 90, 210, and 330 degrees to the monster's body
     double linkPoint[3][2] = {{ 0, linkLength}, {linkLength * std::cos( M_PI * 7/6 ), linkLength * std::sin( M_PI * 7/6 )},{linkLength * std::cos(M_PI * 11/6), linkLength * std::sin(M_PI * 11/6)}};
     
     for(int i = 0;i<30;i++)
         tentacles.push_back(generateTentacleSeg( pos_x + (i%10) * linkPoint[i/10][0], pos_y + (i%10) * linkPoint[i/10][1], 10, 5, i%10));
     
-    
+    //started to generate three tentacles
     for(int j = 0; j < 3; j++)
     {
         b2Body* link = tentacles.at(10 * j)->getBody();
@@ -108,14 +100,12 @@ void Monster::Create(AvancezLib* system, b2World* world, GameObject * go, std::s
             link = newLink;//prepare for next iteration
         }
         
-        std::cout<<linkPoint[j][0]<<" "<<linkPoint[j][1]<<std::endl;
-        
         b2RevoluteJointDef revoluteJointDef;
-        //a revolute joint to connect the circle to the ground
-        revoluteJointDef.bodyA = _monsterBody->getBody();//provided by testbed
+        //a revolute joint to connect the monster's body
+        revoluteJointDef.bodyA = _monsterBody->getBody();
         revoluteJointDef.bodyB = tentacles.at(10*j)->getBody();
-        revoluteJointDef.localAnchorA.Set(linkPoint[j][0], linkPoint[j][1]);//center of circle
-        revoluteJointDef.localAnchorB.Set(4,0);//world coords, because m_groundBody is at (0,0)
+        revoluteJointDef.localAnchorA.Set(linkPoint[j][0], linkPoint[j][1]);
+        revoluteJointDef.localAnchorB.Set(4,0);
         _world->CreateJoint( &revoluteJointDef );
     }
     
@@ -153,10 +143,7 @@ Box* Monster::generateTentacleSeg( float pos_x, float pos_y, float size_x, float
 
 void Monster::Init()
 {
-    
-    //_mainBody->ApplyLinearImpulse(b2Vec2(_mainBody->GetMass() * 100 ,_mainBody->GetMass() * 300), _mainBody->GetWorldCenter(), true);
-    //_mainBody->ApplyAngularImpulse(30, true);
-    
+
     rushTime = 0;
     wanderTime = 0;
     std::srand(std::time(NULL));
@@ -173,19 +160,19 @@ void Monster::Init()
 void Monster::Update(float dt){
     
     float angle = _mainBody->GetAngle();
-    float movingCloseStrength = 30;
+    float movingCloseStrength = 20;
     float tentacleCorrStrength = 10;
     float wallResistanceStrength = 1.5;
     float wanderStrength = 15;
     
-    
+    //Tentacle's movements
     
     //chase to player
     b2Vec2 near = b2Vec2(_shuttle->horizontalPosition,_shuttle->verticalPosition) - _mainBody->GetPosition();
     near.Normalize();
     _mainBody->ApplyForce(b2Vec2(_mainBody->GetMass() * movingCloseStrength * near.x ,_mainBody->GetMass() * movingCloseStrength * near.y) , _mainBody->GetWorldCenter(), false);
     
-    //wandering
+    //wandering: change a random direction every 3 seconds
     wanderTime +=dt;
     
     if(wanderTime >= 3){
@@ -195,14 +182,14 @@ void Monster::Update(float dt){
         wanderDir = b2Vec2( std::cos(angle/180 * M_PI), std::sin(angle/180 * M_PI));
     }
     
-    //rush to the wander direction
+    //rush to the wander direction every 0.3 secs
     rushTime += dt;
     if(rushTime >= 0.3){
         rushTime = 0;
         _mainBody->ApplyLinearImpulse(b2Vec2( wanderDir.x * wanderStrength,wanderDir.y * wanderStrength) , _mainBody->GetWorldCenter(), false);
     }
     
-    //resistance to the walls
+    //resistance to the walls when the monster is too close to the walls
     float disX = wallDistanceH(_monsterBody->horizontalPosition + _monsterBody->width/2, _monsterBody->verticalPosition + _monsterBody->height/2);
     float disY = wallDistanceV(_monsterBody->horizontalPosition + _monsterBody->width/2, _monsterBody->verticalPosition + _monsterBody->height/2);
    
@@ -224,16 +211,14 @@ void Monster::Update(float dt){
     }
     
     
-    //make tentacle in the right angle
+    //each tentacle has a force to move in the right angle
     _tentaclesBody[0]->ApplyForce(b2Vec2(_mainBody->GetMass() * tentacleCorrStrength * std::cos(angle + M_PI/2) ,_mainBody->GetMass() * tentacleCorrStrength * std::sin(angle + M_PI/2)),  _tentaclesBody[0]->GetWorldCenter(), false);
     _tentaclesBody[1]->ApplyForce(b2Vec2( _mainBody->GetMass() * tentacleCorrStrength * std::cos(angle +M_PI * 7/6) ,_mainBody->GetMass() * tentacleCorrStrength* std::sin(angle + M_PI* 7/6)),  _tentaclesBody[1]->GetWorldCenter(), false);
     
      _tentaclesBody[2]->ApplyForce(b2Vec2( _mainBody->GetMass() * tentacleCorrStrength * std::cos(angle +M_PI* 11/6) ,_mainBody->GetMass() * tentacleCorrStrength * std::sin(angle * M_PI* 11/6)),  _tentaclesBody[2]->GetWorldCenter(), false);
     
-    
+    //setup monster's position to the field
     _field->setMonsterPos(_monsterBody->horizontalPosition, _monsterBody->verticalPosition);
-    
-    
     
     GameObject::Update(dt);
 }

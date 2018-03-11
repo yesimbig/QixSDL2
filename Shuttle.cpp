@@ -11,11 +11,7 @@ void ShuttleBehaviourComponent::Create(AvancezLib* system, GameObject * go, std:
     
     lines = lines_pool;
     chasingLines = chasing_lines_pool;
-    
-    shuttleState = SHUTTLE_STATE_MOVING_EDGE;
-    slowing = false;
-    lineChasing = false;
-    chasingDelay = 0;
+
 }
 
 void ShuttleBehaviourComponent::Init()
@@ -38,145 +34,46 @@ void ShuttleBehaviourComponent::Update(float dt)
 {
     if(dt == 0)return;
     
-    
     AvancezLib::KeyStatus keys;
     system->getKeyStatus(keys);
     
-    //set slow
-    if(shuttleState == SHUTTLE_STATE_MOVING_EDGE){
-        slowing = keys.slow;
-    }
-
     //record the previous location
     float preX = go->horizontalPosition;
     float preY = go->verticalPosition;
-    bool moving = false;
-    if ( keys.right && (nowState != SHUTTLE_MOVE_LEFT || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
-        go->rotationAngle = 90;
-        if(Move(dt * SHUTTLE_MOVING_SPEED, 0, slowing)){
-            nowState = SHUTTLE_MOVE_RIGHT;
-            moving = true;
-            moveStreak += dt;
-        }
-    }
-    else if (keys.left && (nowState != SHUTTLE_MOVE_RIGHT || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
-        go->rotationAngle = 90;
-        if(Move(-dt * SHUTTLE_MOVING_SPEED, 0, slowing)){
-            nowState = SHUTTLE_MOVE_LEFT;
-            moving = true;
-            moveStreak += dt;
-        }
-    }
-    else if (keys.down && (nowState != SHUTTLE_MOVE_UP || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
-        go->rotationAngle = 0;
-        if(Move(0, dt * SHUTTLE_MOVING_SPEED, slowing)){
-            nowState = SHUTTLE_MOVE_DOWN;
-            moving = true;
-            moveStreak += dt;
-        }
-    }
-    else if (keys.up && (nowState != SHUTTLE_MOVE_DOWN || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
-        go->rotationAngle = 0;
-        if(Move(0, -dt * SHUTTLE_MOVING_SPEED, slowing)){
-            nowState = SHUTTLE_MOVE_UP;
-            moving = true;
-            moveStreak += dt;
-        }
-    }
     
-    if(!moving) stopDelay += dt;
-    else stopDelay = 0;
-    
-    //reset moveStreak when play release the moving buttons
-    if((nowState == SHUTTLE_MOVE_UP && !keys.up) || (nowState == SHUTTLE_MOVE_DOWN && !keys.down) ||
-                   (nowState == SHUTTLE_MOVE_LEFT && !keys.left) || (nowState == SHUTTLE_MOVE_RIGHT && !keys.right))
-        moveStreak = 0;
-    
-    
+    //set the current key moving and the shuttle state
+    bool moving = defineKeyPress(keys, dt);
     shuttleState = determineShuttleState(go->horizontalPosition, go->verticalPosition);
-    
-    
+
+
+    //Create a new line seg when shuttle changes its direction or starts to draw
     if( (preState!=nowState && moving && shuttleState == SHUTTLE_STATE_MOVING_MIDDLE) ||
-       (shuttleState == SHUTTLE_STATE_MOVING_MIDDLE && lines->size() == 0)) //Create new line seg
+       (shuttleState == SHUTTLE_STATE_MOVING_MIDDLE && lines->size() == 0))
     {
         if(!slowing)
             lines->push_back(generateLine(preX + SHUTTLE_SIZE/2, preY + SHUTTLE_SIZE/2, LINE_WIDTH, LINE_WIDTH, 0, 119, 200));// blue color
         else
             lines->push_back(generateLine(preX + SHUTTLE_SIZE/2, preY + SHUTTLE_SIZE/2, LINE_WIDTH, LINE_WIDTH, 160, 35, 0));// red color
     }
-    else if(preState == nowState && lines->size() > 0 && moving && shuttleState == SHUTTLE_STATE_MOVING_MIDDLE) //during line seg
+    //set the length of the last line seg while drawing
+    else if(preState == nowState && lines->size() > 0 && moving && shuttleState == SHUTTLE_STATE_MOVING_MIDDLE)
     {
         lines->at(lines->size()-1)->set(lines->at(lines->size()-1)->firstX, lines->at(lines->size()-1)->firstY,
                 go->horizontalPosition+SHUTTLE_SIZE/2-LINE_WIDTH/2, go->verticalPosition+SHUTTLE_SIZE/2-LINE_WIDTH/2);
 
     }
-    else if(shuttleState == SHUTTLE_STATE_MOVING_EDGE && lines->size() > 0) //the lines finished
+    //when the lines are finished
+    else if(shuttleState == SHUTTLE_STATE_MOVING_EDGE && lines->size() > 0)
     {
-        int x = (int)go->horizontalPosition + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET;
-        int y = (int)go->verticalPosition + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET;
+        int nowFieldPosH = (int)go->horizontalPosition + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET;
+        int nowFieldPosV = (int)go->verticalPosition + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET;
+        //remove the bias of the last line so that it can correctly connect to the walls
+        removeBiasOfLastSeg(nowFieldPosH, nowFieldPosV, (int)preX + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET, (int)preY  + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET, nowState);
         
-        //set the last line
-        if((int)preX + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET > x)
-        {
-            
-            for(int i = x; i <= (int)preX + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET; i++){
-                if( i >=0 && _field->getGrid()[y * FIELD_WIDTH + i] == FIELD_STATE_EMPTY){
-                    lines->at(lines->size()-1)->set(lines->at(lines->size()-1)->firstX, lines->at(lines->size()-1)->firstY, i-LINE_WIDTH/2 + FIELD_LEFT_OFFSET, go->verticalPosition+SHUTTLE_SIZE/2-LINE_WIDTH/2);
-                    break;
-                }
-                    
-            }
-        }
-        else if((int)preX + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET < x)
-        {
-            for(int i = x; i >= (int)preX + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET; i--){
-                if( i < FIELD_WIDTH && _field->getGrid()[y * FIELD_WIDTH + i] == FIELD_STATE_EMPTY){
-                    lines->at(lines->size()-1)->set(lines->at(lines->size()-1)->firstX, lines->at(lines->size()-1)->firstY, i-LINE_WIDTH/2 + FIELD_LEFT_OFFSET, go->verticalPosition+SHUTTLE_SIZE/2-LINE_WIDTH/2);
-                    break;
-                }
-                
-            }
-        }
-        else if((int)preY + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET > y)
-        {
-            
-            for(int i = y; i <= (int)preY + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET; i++){
-                if( i >=0 && _field->getGrid()[i * FIELD_WIDTH + x] == FIELD_STATE_EMPTY){
-                    lines->at(lines->size()-1)->set(lines->at(lines->size()-1)->firstX, lines->at(lines->size()-1)->firstY, go->horizontalPosition+SHUTTLE_SIZE/2-LINE_WIDTH/2, i + FIELD_TOP_OFFSET -LINE_WIDTH/2);
-                    break;
-                }
-                
-            }
-        }
-        else if((int)preY + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET < y)
-        {
-            for(int i = y; i >= (int)preY + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET; i--){
-                
-                if( i < FIELD_HEIGHT && _field->getGrid()[i * FIELD_WIDTH + x] == FIELD_STATE_EMPTY){
-                    lines->at(lines->size()-1)->set(lines->at(lines->size()-1)->firstX, lines->at(lines->size()-1)->firstY, go->horizontalPosition+SHUTTLE_SIZE/2-LINE_WIDTH/2, (float)i + FIELD_TOP_OFFSET -LINE_WIDTH/2);
-                    break;
-                }
-                
-            }
-        }
-        
+        //fill up the grid and color the field
         _field->setGrid(lines,slowing);
-        x = (int)go->horizontalPosition + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET;
-        y = (int)go->verticalPosition + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET;
-        for(int i = 0;i <= LINE_WIDTH; i++){
-            if(!determineGridCollition(x+i ,y , _field->getGrid())) {
-                go->horizontalPosition += i;break;
-            }
-            if(!determineGridCollition(x-i ,y , _field->getGrid())) {
-                go->horizontalPosition -= i;break;
-            }
-            if(!determineGridCollition(x ,y+i , _field->getGrid())) {
-                go->verticalPosition += i;break;
-            }
-            if(!determineGridCollition(x ,y-i , _field->getGrid())) {
-                go->verticalPosition -= i;break;
-            }
-        }
+        
+        removeBiasOfShuttlesPos(nowFieldPosH, nowFieldPosV);
 
         lines->Destroy();
         lines->clear();
@@ -194,67 +91,7 @@ void ShuttleBehaviourComponent::Update(float dt)
         }
         else if(!moving) //no moving, start to chase
         {
-            int chasingSize = chasingLines->size();
-            int lineSize = lines->size();
-            if(chasingSize == 0)
-            {
-                chasingLines->push_back(generateLine(lines->at(0)->firstX, lines->at(0)->firstY, LINE_WIDTH, LINE_WIDTH, 80, 30, 80));
-                growingLength = 0;
-            }
-            else if( chasingSize <= lineSize){
-                float dm = dt * LINE_CHASING_SPEED;
-                growingLength += dm;
-                Lines* nowAt = chasingLines->at(chasingSize-1), *refAt = lines->at(chasingSize-1);
-                if(refAt->height > LINE_WIDTH)
-                {
-                    if(growingLength >= refAt->height){
-                        nowAt->set( refAt->horizontalPosition, refAt->verticalPosition, refAt->horizontalPosition, refAt->verticalPosition + refAt->height - LINE_WIDTH );
-                        if(chasingSize < lineSize){
-                            chasingLines->push_back(generateLine(lines->at(chasingSize)->firstX, lines->at(chasingSize)->firstY, LINE_WIDTH, LINE_WIDTH, 80, 30, 80));
-                            growingLength = 0;
-                        }
-                        else{
-                            go->Send(HIT);
-                        }
-                    }
-                    else{
-                        //move up
-                        if( lines->at(chasingSize-1)->firstY != lines->at(chasingSize-1)->verticalPosition )
-                        {
-                            nowAt->set( refAt->firstX, refAt->firstY, refAt->firstX,refAt->firstY - (int)growingLength );
-                        }
-                        else //move down
-                        {
-                            nowAt->set( refAt->firstX, refAt->firstY, refAt->firstX,refAt->firstY + (int)growingLength);
-                        }
-                    }
-                        
-                }
-                else
-                {
-                    if(growingLength >= refAt->width){
-                        nowAt->set( refAt->horizontalPosition, refAt->verticalPosition, refAt->horizontalPosition + refAt->width - LINE_WIDTH, refAt->verticalPosition);
-                        if(chasingSize < lineSize){
-                            chasingLines->push_back(generateLine(lines->at(chasingSize)->firstX, lines->at(chasingSize)->firstY, LINE_WIDTH, LINE_WIDTH, 80, 30, 80));
-                            growingLength = 0;
-                        }
-                        else{
-                            go->Send(HIT);
-                        }
-                    }
-                    else{
-                        //move left
-                        if( lines->at(chasingSize-1)->firstX != lines->at(chasingSize-1)->horizontalPosition )
-                        {
-                            nowAt->set( refAt->firstX, refAt->firstY, refAt->firstX - (int)growingLength ,refAt->firstY );
-                        }
-                        else //move right
-                        {
-                            nowAt->set( refAt->firstX, refAt->firstY, refAt->firstX + (int)growingLength ,refAt->firstY );
-                        }
-                    }
-                }
-            }
+            setChasingLines(chasingLines->size(), lines->size(), dt);
         }
         else if(moving)
         {
@@ -262,11 +99,64 @@ void ShuttleBehaviourComponent::Update(float dt)
         }
         
     }
-    
-    
+
     preState = nowState;
 }
 
+bool ShuttleBehaviourComponent::defineKeyPress(AvancezLib::KeyStatus keys, float dt)
+{
+    //set slow only when shuttle is on the edge
+    if(shuttleState == SHUTTLE_STATE_MOVING_EDGE){
+        slowing = keys.slow;
+    }
+    
+    if ( keys.right && (nowState != SHUTTLE_MOVE_LEFT || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
+        go->rotationAngle = 90;
+        if(Move(dt * SHUTTLE_MOVING_SPEED, 0, slowing)){
+            nowState = SHUTTLE_MOVE_RIGHT;
+            moveStreak += dt;
+            stopDelay = 0;
+            return true;
+        }
+    }
+    else if (keys.left && (nowState != SHUTTLE_MOVE_RIGHT || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
+        go->rotationAngle = 90;
+        if(Move(-dt * SHUTTLE_MOVING_SPEED, 0, slowing)){
+            nowState = SHUTTLE_MOVE_LEFT;
+            moveStreak += dt;
+            stopDelay = 0;
+            return true;
+        }
+    }
+    else if (keys.down && (nowState != SHUTTLE_MOVE_UP || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
+        go->rotationAngle = 0;
+        if(Move(0, dt * SHUTTLE_MOVING_SPEED, slowing)){
+            nowState = SHUTTLE_MOVE_DOWN;
+            moveStreak += dt;
+            stopDelay = 0;
+            return true;
+        }
+    }
+    else if (keys.up && (nowState != SHUTTLE_MOVE_DOWN || shuttleState != SHUTTLE_STATE_MOVING_MIDDLE)){
+        go->rotationAngle = 0;
+        if(Move(0, -dt * SHUTTLE_MOVING_SPEED, slowing)){
+            nowState = SHUTTLE_MOVE_UP;
+            moveStreak += dt;
+            stopDelay = 0;
+            return true;
+        }
+    }
+    
+    //reset moveStreak when player release the moving buttons
+    if((nowState == SHUTTLE_MOVE_UP && !keys.up) || (nowState == SHUTTLE_MOVE_DOWN && !keys.down) ||
+       (nowState == SHUTTLE_MOVE_LEFT && !keys.left) || (nowState == SHUTTLE_MOVE_RIGHT && !keys.right))
+        moveStreak = 0;
+    
+    //calculate the stopDelay time
+    stopDelay += dt;
+    
+    return false;
+}
 
 bool ShuttleBehaviourComponent::Move(float moveH, float moveV, bool slow)
 {
@@ -279,7 +169,6 @@ bool ShuttleBehaviourComponent::Move(float moveH, float moveV, bool slow)
     float afterMoveV = go->verticalPosition + moveV * slow_rate;
     
     //border detection
-    
     if(afterMoveH < FIELD_LEFT_OFFSET - SHUTTLE_SIZE/2){
         go->horizontalPosition = FIELD_LEFT_OFFSET - SHUTTLE_SIZE/2;
         return false;
@@ -341,7 +230,7 @@ bool ShuttleBehaviourComponent::Move(float moveH, float moveV, bool slow)
     }
     
     //collision detection to occupied grid
-    if(determineGridCollition((int)afterMoveH + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET,(int)afterMoveV + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET, _field->getGrid()))
+    if(determineGridState((int)afterMoveH + SHUTTLE_SIZE/2 - FIELD_LEFT_OFFSET,(int)afterMoveV + SHUTTLE_SIZE/2 - FIELD_TOP_OFFSET, _field->getGrid()) == FIELD_STATE_OCCUPIED)
     {
          return false;
     }
@@ -359,40 +248,6 @@ bool ShuttleBehaviourComponent::Move(float moveH, float moveV, bool slow)
     
     
     return true;
-}
-
-int ShuttleBehaviourComponent::determineShuttleState(float posH, float posV)
-{
-
-    //determine border
-    if(posH == FIELD_LEFT_OFFSET - SHUTTLE_SIZE/2 ||
-       posH == FIELD_LEFT_OFFSET + FIELD_WIDTH - SHUTTLE_SIZE/2 ||
-       posV == FIELD_TOP_OFFSET - SHUTTLE_SIZE/2 ||
-       posV == FIELD_TOP_OFFSET + FIELD_HEIGHT - SHUTTLE_SIZE/2){
-        return SHUTTLE_STATE_MOVING_EDGE;
-    }
-    
-    //determine finished line
-    int absPosH = (int)posH + go->width/2 - FIELD_LEFT_OFFSET;
-    int absPosV = (int)posV + go->height/2 - FIELD_TOP_OFFSET;
-    
-    if( _field->getGrid()[absPosV * FIELD_WIDTH + absPosH] != FIELD_STATE_EMPTY ) return SHUTTLE_STATE_MOVING_EDGE;
-    
-    return SHUTTLE_STATE_MOVING_MIDDLE;
-}
-
-bool ShuttleBehaviourComponent::determineGridCollition(int i,int j,int* _grid)
-{
-    //std::cout<<i<<" "<<j<<"\n";
-    if(j<0) j = 0;
-    if(i<0) i = 0;
-    if (j>=FIELD_HEIGHT) j = FIELD_HEIGHT-1;
-    if (i>=FIELD_WIDTH) i = FIELD_WIDTH-1;
-    if(j<FIELD_HEIGHT && i < FIELD_WIDTH &&  _grid[j * FIELD_WIDTH + i] == FIELD_STATE_OCCUPIED)
-    {
-        return true;
-    }
-    return false;
 }
 
 Lines* ShuttleBehaviourComponent::generateLine(float x, float y, float w, float h, int r, int g, int b, int a)
@@ -417,7 +272,164 @@ Lines* ShuttleBehaviourComponent::generateLine(float x, float y, float w, float 
     return line;
 }
 
+int ShuttleBehaviourComponent::determineShuttleState(float posH, float posV)
+{
 
+    //determine border
+    if(posH == FIELD_LEFT_OFFSET - SHUTTLE_SIZE/2 ||
+       posH == FIELD_LEFT_OFFSET + FIELD_WIDTH - SHUTTLE_SIZE/2 ||
+       posV == FIELD_TOP_OFFSET - SHUTTLE_SIZE/2 ||
+       posV == FIELD_TOP_OFFSET + FIELD_HEIGHT - SHUTTLE_SIZE/2){
+        return SHUTTLE_STATE_MOVING_EDGE;
+    }
+    
+    //determine finished line
+    int absPosH = (int)posH + go->width/2 - FIELD_LEFT_OFFSET;
+    int absPosV = (int)posV + go->height/2 - FIELD_TOP_OFFSET;
+    
+    if( _field->getGrid()[absPosV * FIELD_WIDTH + absPosH] != FIELD_STATE_EMPTY ) return SHUTTLE_STATE_MOVING_EDGE;
+    
+    return SHUTTLE_STATE_MOVING_MIDDLE;
+}
+
+void ShuttleBehaviourComponent::removeBiasOfLastSeg(int x, int y, int preX, int preY, int nowState)
+{
+    Lines *lastLine = lines->at(lines->size()-1);
+    float firstX = lastLine->firstX;
+    float firstY = lastLine->firstY;
+    
+    //go left line
+    if(nowState == SHUTTLE_MOVE_LEFT)
+    {
+        for(int i = x; i <= preX; i++){
+            if( i >=0 && determineGridState(i, y, _field->getGrid())==FIELD_STATE_EMPTY ){
+                lastLine->set( firstX, firstY, i-LINE_WIDTH/2 + FIELD_LEFT_OFFSET, go->verticalPosition+SHUTTLE_SIZE/2-LINE_WIDTH/2);
+                break;
+            }
+        }
+    }
+    //go right line
+    else if(nowState == SHUTTLE_MOVE_RIGHT)
+    {
+        for(int i = x; i >= preX; i--){
+            if( i < FIELD_WIDTH && determineGridState(i, y, _field->getGrid())==FIELD_STATE_EMPTY ){
+                lastLine->set( firstX, firstY, i-LINE_WIDTH/2 + FIELD_LEFT_OFFSET, go->verticalPosition+SHUTTLE_SIZE/2-LINE_WIDTH/2);
+                break;
+            }
+        }
+    }
+     //go up line
+    else if(nowState == SHUTTLE_MOVE_UP)
+    {
+        for(int i = y; i <= preY; i++){
+            if( i >=0 && determineGridState(x, i, _field->getGrid())==FIELD_STATE_EMPTY){
+                lastLine->set(firstX, firstY, go->horizontalPosition+SHUTTLE_SIZE/2-LINE_WIDTH/2, i + FIELD_TOP_OFFSET -LINE_WIDTH/2);
+                break;
+            }
+        }
+    }
+    //go down line
+    else if(nowState == SHUTTLE_MOVE_DOWN)
+    {
+        for(int i = y; i >= preY; i--){
+            if( i < FIELD_HEIGHT && determineGridState(x, i, _field->getGrid())==FIELD_STATE_EMPTY){
+                lastLine->set(firstX, firstY, go->horizontalPosition+SHUTTLE_SIZE/2-LINE_WIDTH/2, (float)i + FIELD_TOP_OFFSET -LINE_WIDTH/2);
+                break;
+            }
+        }
+    }
+}
+
+void ShuttleBehaviourComponent::removeBiasOfShuttlesPos(int x, int y)
+{
+    for(int i = 0;i <= LINE_WIDTH; i++){
+        if(determineGridState(x+i ,y , _field->getGrid()) != FIELD_STATE_OCCUPIED) {
+            go->horizontalPosition += i;return;
+        }
+        if(determineGridState(x-i ,y , _field->getGrid()) != FIELD_STATE_OCCUPIED) {
+            go->horizontalPosition -= i;return;
+        }
+        if(determineGridState(x ,y+i , _field->getGrid()) != FIELD_STATE_OCCUPIED) {
+            go->verticalPosition += i;return;
+        }
+        if(determineGridState(x ,y-i , _field->getGrid()) != FIELD_STATE_OCCUPIED) {
+            go->verticalPosition -= i;return;
+        }
+    }
+}
+
+int ShuttleBehaviourComponent::determineGridState(int i,int j,int* _grid)
+{
+    if(j<0) j = 0;
+    if(i<0) i = 0;
+    if (j>=FIELD_HEIGHT) j = FIELD_HEIGHT-1;
+    if (i>=FIELD_WIDTH) i = FIELD_WIDTH-1;
+    
+    return _grid[j * FIELD_WIDTH + i];
+}
+
+void ShuttleBehaviourComponent::setChasingLines(int chasingSize, int lineSize, float dt)
+{
+    if(chasingSize == 0)
+    {
+        chasingLines->push_back(generateLine(lines->at(0)->firstX, lines->at(0)->firstY, LINE_WIDTH, LINE_WIDTH, 80, 30, 80));
+        growingLength = 0;
+    }
+    else if( chasingSize <= lineSize){
+        float dm = dt * LINE_CHASING_SPEED;
+        growingLength += dm;
+        Lines* nowAt = chasingLines->at(chasingSize-1), *refAt = lines->at(chasingSize-1);
+        if(refAt->height > LINE_WIDTH)
+        {
+            if(growingLength >= refAt->height){
+                nowAt->set( refAt->horizontalPosition, refAt->verticalPosition, refAt->horizontalPosition, refAt->verticalPosition + refAt->height - LINE_WIDTH );
+                if(chasingSize < lineSize){
+                    chasingLines->push_back(generateLine(lines->at(chasingSize)->firstX, lines->at(chasingSize)->firstY, LINE_WIDTH, LINE_WIDTH, 80, 30, 80));
+                    growingLength = 0;
+                }
+                else{
+                    go->Send(HIT);
+                }
+            }
+            else{
+                //move up
+                if( lines->at(chasingSize-1)->firstY != lines->at(chasingSize-1)->verticalPosition )
+                {
+                    nowAt->set( refAt->firstX, refAt->firstY, refAt->firstX,refAt->firstY - (int)growingLength );
+                }
+                else //move down
+                {
+                    nowAt->set( refAt->firstX, refAt->firstY, refAt->firstX,refAt->firstY + (int)growingLength);
+                }
+            }
+            
+        }
+        else
+        {
+            if(growingLength >= refAt->width){
+                nowAt->set( refAt->horizontalPosition, refAt->verticalPosition, refAt->horizontalPosition + refAt->width - LINE_WIDTH, refAt->verticalPosition);
+                if(chasingSize < lineSize){
+                    chasingLines->push_back(generateLine(lines->at(chasingSize)->firstX, lines->at(chasingSize)->firstY, LINE_WIDTH, LINE_WIDTH, 80, 30, 80));
+                    growingLength = 0;
+                }
+                else{
+                    go->Send(HIT);
+                }
+            }
+            else{
+                //move left
+                if( lines->at(chasingSize-1)->firstX != lines->at(chasingSize-1)->horizontalPosition )
+                {
+                    nowAt->set( refAt->firstX, refAt->firstY, refAt->firstX - (int)growingLength ,refAt->firstY );
+                }
+                else //move right
+                {
+                    nowAt->set( refAt->firstX, refAt->firstY, refAt->firstX + (int)growingLength ,refAt->firstY );
+                }
+            }
+        }
+    }
+}
 
 void Shuttle::Init(float h, float v)
 {
@@ -436,8 +448,6 @@ void Shuttle::Receive(Message m)
 
 void Shuttle::Update(float dt)
 {
-    //SDL_Log("%d",canHit);
-    //can hit or not
     if(dieDelay<SHUTTLE_DIE_DELAY)
         dieDelay += dt;
     else

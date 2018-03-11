@@ -19,17 +19,13 @@ public:
     
     virtual void Update(float dt);
     
-    //bool Move(float dt);
-    
-    bool determineLineCollition(float posX, float posY);
-    float distance(float posX1, float posY1, float posX2, float posY2);
+    bool determineLineCollition(float posX, float posY);    //check if every the monster collide on the lines or not
     
 private:
     
-    ObjectPool<Lines>* lines;
-    Box * _monster;
+    ObjectPool<Lines>* lines;   //the lines drawn by the shuttle
+    Box * _monster;     //main body of the monster
     
-    float speedH, speedV;
 };
 
 
@@ -43,8 +39,8 @@ class Monster: public GameObject
     ObjectPool<Lines>* _lines_pool;
     Shuttle* _shuttle;
     
-    b2Body* _mainBody;
-    b2Body* _tentaclesBody[3];
+    b2Body* _mainBody;          //monster's main body
+    b2Body* _tentaclesBody[3];  //three tentacles
     
 public:
     Circle *_monsterBody;
@@ -64,7 +60,7 @@ public:
     
     Box* generateTentacleSeg(float pos_x, float pos_y, float size_x, float size_y, int r);
     
-    float wallDistanceH(float posX, float posV);
-    float wallDistanceV(float posX, float posV);
+    float wallDistanceH(float posX, float posV);    //calculate the horizontal distance to the nearest wall
+    float wallDistanceV(float posX, float posV); //calculate the vertical distance to the nearest wall
     
 };

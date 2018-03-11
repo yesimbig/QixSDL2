@@ -34,9 +34,11 @@ void SparxBehaviourComponent::Update(float dt)
     float altPosy = go->verticalPosition + go->height/2 - FIELD_TOP_OFFSET;
     int* dirGrid;
     
+    //reverse map
     if(!turn) dirGrid = _field->getReDirGrid();
     else dirGrid = _field->getDirGrid();
     
+    //find the nearest point on dirField that has the direction data
     if(dirGrid[(int)altPosy*FIELD_WIDTH + (int)altPosx]==0){
         for(int i = 1;i<=LINE_WIDTH;i++){
             if(altPosx - i>=0 && dirGrid[(int)altPosy*FIELD_WIDTH + (int)altPosx - i] != 0){
@@ -57,12 +59,11 @@ void SparxBehaviourComponent::Update(float dt)
             }
         }
     }
-    //if(turn)std::cout<<altPosx <<" "<<altPosy<<"\n";
-   // SDL_Log("%d %d\n",(int)altPosy,(int)altPosx);
     
     float nextPosx = altPosx;
     float nextPosy = altPosy;
-    
+   
+    //find the nearest point that switch the direction, and follow the path
     if( dirGrid[(int)altPosy*FIELD_WIDTH + (int)altPosx] == FIELD_LEFT){
         
         int i;

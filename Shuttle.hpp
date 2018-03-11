@@ -19,26 +19,32 @@ public:
     
     virtual void Update(float dt);
     
-    // move the player left or right
-    bool Move(float moveH, float moveV, bool slow);
-    int determineShuttleState(float posH, float posV);
-    Lines* generateLine(float x,float y, float w, float h, int r, int g, int b, int a = 255);
-    bool determineGridCollition(int i,int j,int* _grid);
-    void resetLines();
+    bool defineKeyPress(AvancezLib::KeyStatus keys, float dt); //handle the key's statement, and return if the shuttle moves or not
+    bool Move(float moveH, float moveV, bool slow); //handle shuttle's movement, and return if the next step is correct or not
+    int determineShuttleState(float posH, float posV); //determine the position's statement (edge or middle)
+    
+    Lines* generateLine(float x,float y, float w, float h, int r, int g, int b, int a = 255); //generate a line segment
+    
+    void removeBiasOfLastSeg(int x, int y, int preX, int preY, int nowState); //if the last seg of lines doesn't connect on the edge or the wall, it remove the bias
+    void removeBiasOfShuttlesPos(int x, int y); //if the shuttle isn't on the edge or the wall, it remove the bias
+    
+    int determineGridState(int i,int j,int* _grid); //return gird's statement
+    
+    void setChasingLines(int chasingSize, int lineSize, float dt); //setup the chasing line's movement
     
 private:
     
     Field* _field;
-    int preState;
-    int nowState;
     ObjectPool<Lines>* lines;
     ObjectPool<Lines>* chasingLines;
     
-    int shuttleState;
-    bool slowing;
-    bool lineChasing;
-    float growingLength;
-    float chasingDelay;
+    int preState;   //previous moving direction
+    int nowState;   //current moving direction
+    int shuttleState; //shuttle statement: on edge or on middle
+    bool slowing;   //slow mode
+    bool lineChasing;   //the current line is chasing
+    float growingLength; //current length of the chasing line on the seg
+    float chasingDelay;  //caclate the chasing line's delay time
     float moveStreak; //calculate the moving streak, it is used to determine the shuttle should be stopped while it moves out of the edge
     float stopDelay; // whenever the shuttle stop, it calculate the time of stop
 
@@ -58,10 +64,7 @@ public:
     void resetHit();
     
     
-    bool canHit;
-    float dieDelay;
-    int state;
-    bool hit;
-    int life;
+    bool canHit;    //shuttle can be hit or not
+    float dieDelay; //after it revives, it has time that cannot be hit
 };
 

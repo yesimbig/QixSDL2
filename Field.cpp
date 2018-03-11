@@ -61,10 +61,7 @@ void Field::Init()
 
 void Field::setGrid(ObjectPool<Lines>* lines, bool slowing)
 {
-    //get verticle line first
-    
-    std::vector<vLines> allLines;
-    
+    //fill in the lines' position
     for (auto i = 0; i < lines->size(); i++)
     {
         GameObject* go0 = lines->at(i);
@@ -76,14 +73,12 @@ void Field::setGrid(ObjectPool<Lines>* lines, bool slowing)
                 }
         //set box2D wall
         _walls->push_back(generateWall((int)go0->horizontalPosition,(int)go0->verticalPosition, (int)go0->width + 1, (int) go0->height + 1));
-        
     }
     
-    
     //start to set grid map
-    
     int mY = (int)monsterY - FIELD_TOP_OFFSET;
     int mX = (int)monsterX - FIELD_LEFT_OFFSET;
+    
     //BFS
     memset(visit,false,sizeof(visit));
     std::queue<Point> Q;
@@ -151,7 +146,7 @@ void Field::setGrid(ObjectPool<Lines>* lines, bool slowing)
     }
 }
 
-void Field::setDirField(int x, int y, int *grid, int *dirField, bool turn)
+void Field::setDirField(int x, int y, int *grid, int *dirField, bool turn)//turn means reverse
 {
     //find the rightest line of the field
     while( x>0 && !isEdge(x,y,grid)) x--;
@@ -170,6 +165,7 @@ void Field::setDirField(int x, int y, int *grid, int *dirField, bool turn)
     visit[y*FIELD_WIDTH + x] = true;
     
     int nowX = x, nowY = y;
+    
     if(turn)nowY++;
     else nowY--;
     

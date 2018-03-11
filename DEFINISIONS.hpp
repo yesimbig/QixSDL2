@@ -16,7 +16,7 @@
 #define SPARX_FRAME_RATE         0.1
 #define SPARX_SPEED              200.0f
 #define SPARX_MAX_NUM            10
-#define SPARX_GENERATE_TIME      30
+#define SPARX_GENERATE_TIME      39
 
 #define FIELD_WIDTH 540
 #define FIELD_HEIGHT 650

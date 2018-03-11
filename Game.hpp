@@ -25,8 +25,8 @@ public:
     virtual void Init(AvancezLib* system);
     
     virtual void HandleEvents();
-    virtual void Update(float dt);
-    virtual void Render();
+    virtual void Update(float dt);  //control the game state
+    virtual void Render();          //draw the game text
     virtual void Receive(Message m);
     virtual void Clean();
     
@@ -37,12 +37,9 @@ private:
     
     Field* _field;      //color the whole field
     Shuttle* _shuttle;  //player's shuttle
-    Monster* _monster;  //temperary monster
+    Monster* _monster;  //tentacle monster
     
     b2World * world;    //Box2D world
-    
-    Box * static_box;
-    Box * dynamic_box;
     
     ObjectPool<Lines> lines_pool;   //the lines drawn by shuttle
     ObjectPool<Lines> chasing_lines_pool;   //chasing lines that caused by the hesitation of the player
@@ -50,10 +47,10 @@ private:
     
     ObjectPool<Box> walls;  //field's walls
     
-    float die_time;
-    int gameState;
-    int life;
+    float die_time;         //caculate the die time, and then switch to gameover or continue
+    int gameState;          //the whole game's states
+    int life;               //calculate shuttle's lives
     float generate_time;    //caculate generate time_delay
-    int sparx_num;
+    int sparx_num;          //caculate current sparx number
 };
 
