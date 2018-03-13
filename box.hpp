@@ -70,6 +70,12 @@ public:
             go->enabled = false;
     }
     
+    virtual void Destroy()
+    {
+        world->DestroyBody(body);
+        Component::Destroy();
+    }
+    
     virtual b2Body* getBody()
     {
         return body;

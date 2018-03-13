@@ -3,7 +3,7 @@
 #include "Monster.hpp"
 #include "DEFINISIONS.hpp"
 #include "box.hpp"
-
+#include <time.h>
 
 void MonsterBehaviourComponent::Create(AvancezLib* system, b2World * world, GameObject * go, std::set<GameObject*> * game_objects, ObjectPool<Lines>* lines_pool)
 {
@@ -156,7 +156,7 @@ void Monster::Init(float pos_x, float pos_y)
         tentacles.at(i)->getBody()->SetTransform( b2Vec2(pos_x + (i%10) * linkPoint[i/10][0], pos_y + (i%10) * linkPoint[i/10][1]), 0);
 
     
-    std::srand(std::time(NULL));
+    std::srand(time(NULL));
     float angle = std::rand()%360;
     wanderDir = b2Vec2( std::cos(angle/180 * M_PI), std::sin(angle/180 * M_PI));
     
@@ -176,7 +176,7 @@ void Monster::Update(float dt){
     float wanderStrength = 15;
     
     //Tentacle's movements
-    
+    _world->ClearForces();
     //chase to player
     b2Vec2 near = b2Vec2(_shuttle->horizontalPosition,_shuttle->verticalPosition) - _mainBody->GetPosition();
     near.Normalize();
